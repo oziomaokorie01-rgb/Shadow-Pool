@@ -116,7 +116,7 @@ Arcium SDK (Simulated Integration)
 
 🧑‍💻 Developer Info
 
-Built by: @Senseii_ciel
+Built by: https://x.com/@Senseii_ciel
 Discord: https://discord.com/users/1305099867126759516
 GitHub: ozzy-sensei
 
