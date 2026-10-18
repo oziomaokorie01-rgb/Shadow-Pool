@@ -65,7 +65,6 @@
   }
 
   function updateMarket() {
-    const previous = marketPrice;
     marketPrice = Math.max(140, Math.min(155, marketPrice + (Math.random() - 0.49) * 0.22));
     chartValues.push(marketPrice);
     chartValues = chartValues.slice(-42);
@@ -176,7 +175,8 @@
       typeCell.innerHTML = `<span class="trade-type-cell"><i class="type-dot ${trade.type === "Sell" ? "sell" : ""}"></i>${trade.type}</span>`;
       const quantityCell = cell(`${trade.quantity.toLocaleString("en-US", { maximumFractionDigits: 4 })} SOL`, "mono");
       const priceCell = cell(money(trade.fillPrice), "mono");
-      const slippageCell = cell(`${trade.slippageRate > 0 ? "+" : ""}${(trade.slippageRate * 100).toFixed(3)}%`, `mono ${trade.slippageRate > 0 ? "negative" : "positive"}`);
+      const slipHurts = trade.type === "Buy" ? trade.slippageRate > 0 : trade.slippageRate < 0;
+      const slippageCell = cell(`${trade.slippageRate > 0 ? "+" : ""}${(trade.slippageRate * 100).toFixed(3)}%`, `mono ${slipHurts ? "negative" : "positive"}`);
       const resultCell = cell(signedMoney(trade.executionDifference), `mono ${trade.executionDifference >= 0 ? "positive" : "negative"}`);
       row.append(typeCell, quantityCell, priceCell, slippageCell, resultCell);
       tbody.appendChild(row);
