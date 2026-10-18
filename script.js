@@ -293,6 +293,24 @@
     });
   });
 
+  // scroll-spy: keep the sidebar's active item in sync with the section in view
+  const spyLinks = [...document.querySelectorAll(".nav-item")];
+  const spySections = spyLinks
+    .map((link) => document.getElementById(link.getAttribute("href").slice(1)))
+    .filter(Boolean);
+  function onScrollSpy() {
+    if (!spySections.length) return;
+    const line = window.innerHeight * 0.4;
+    let current = spySections[0];
+    for (const section of spySections) {
+      if (section.getBoundingClientRect().top <= line) current = section;
+    }
+    spyLinks.forEach((link) => link.classList.toggle("active", link.getAttribute("href") === "#" + current.id));
+  }
+  window.addEventListener("scroll", () => requestAnimationFrame(onScrollSpy), { passive: true });
+  window.addEventListener("resize", () => requestAnimationFrame(onScrollSpy), { passive: true });
+  onScrollSpy();
+
   renderStats();
   renderTrades();
   renderLeaderboard();
