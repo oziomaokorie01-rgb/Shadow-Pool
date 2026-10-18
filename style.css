@@ -1,3 +1,4 @@
+:root {
   color-scheme: dark;
   --bg: #090c11;
   --panel: #10151d;
@@ -74,3 +75,11 @@ h2 { font-size: 16px; letter-spacing: -.35px; margin-top: 4px; }
 .pulse-dot {
   animation: pulse-green 2s infinite;
 }
+
+/* corrections: stop the long wallet label from clipping off the right edge */
+#wallet-button-label {
+  display: inline-block; max-width: 13ch;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: middle;
+}
+/* corrections: the × dismiss button was a ~3px tap target (a11y) */
+.notice-dismiss { min-width: 34px; min-height: 34px; padding: 6px 10px; line-height: 1; }
