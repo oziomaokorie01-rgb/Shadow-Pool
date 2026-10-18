@@ -4,6 +4,7 @@
   const STARTING_BALANCE = 10000;
   const STORAGE_KEY = "shadowpool-session-v1";
   const LEADERBOARD_KEY = "shadowpool-leaderboard-v1";
+  const CANDLE_COUNT = 26;
   const $ = (id) => document.getElementById(id);
 
   let tradeType = "Buy";
@@ -11,7 +12,8 @@
   let session = loadSession();
   let leaderboard = loadLeaderboard();
   let marketPrice = 148.25;
-  let chartValues = createChartValues();
+  let basePrice = 148.25;          // anchor for % change; re-anchored if real price loads
+  let candles = createCandles();   // [{o,h,l,c}]
   let toastTimer;
 
   function loadSession() {
@@ -25,7 +27,7 @@
   function loadLeaderboard() {
     try {
       const saved = JSON.parse(localStorage.getItem(LEADERBOARD_KEY) || "[]");
-      return Array.isArray(saved) ? saved.filter((entry) => entry && typeof entry.username === "string" && Number.isFinite(entry.points)).slice(0, 5) : [];
+      return Array.isArray(saved) ? saved.filter((e) => e && typeof e.username === "string" && Number.isFinite(e.points)).slice(0, 5) : [];
     } catch (_) { return []; }
   }
 
@@ -36,45 +38,113 @@
   function money(value) {
     return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value);
   }
-
   function signedMoney(value) {
     return `${value >= 0 ? "+" : "−"}${money(Math.abs(value))}`;
   }
 
-  function createChartValues() {
-    let value = 148.25;
-    return Array.from({ length: 42 }, () => {
-      value += (Math.random() - 0.47) * 0.48;
-      value = Math.max(146.1, Math.min(149.8, value));
-      return value;
-    });
+  function createCandles() {
+    let value = basePrice;
+    const out = [];
+    for (let i = 0; i < CANDLE_COUNT; i++) {
+      const o = value;
+      const move = (Math.random() - 0.48) * 0.9;
+      const c = Math.max(140, Math.min(158, o + move));
+      const h = Math.max(o, c) + Math.random() * 0.4;
+      const l = Math.min(o, c) - Math.random() * 0.4;
+      out.push({ o, h, l, c });
+      value = c;
+    }
+    marketPrice = value;
+    return out;
   }
 
-  function drawChart() {
-    const width = 680, height = 188, pad = 5;
-    const min = Math.min(...chartValues) - 0.35;
-    const max = Math.max(...chartValues) + 0.35;
-    const points = chartValues.map((v, i) => {
-      const x = (i / (chartValues.length - 1)) * width;
-      const y = height - ((v - min) / (max - min)) * (height - pad * 2) - pad;
-      return [x, y];
+  function tickCandles() {
+    const last = candles[candles.length - 1];
+    const move = (Math.random() - 0.49) * 0.5;
+    const c = Math.max(140, Math.min(158, last.c + move));
+    last.c = c;
+    last.h = Math.max(last.h, c);
+    last.l = Math.min(last.l, c);
+    marketPrice = c;
+    // roll a fresh candle every few ticks so the chart scrolls left
+    if (Math.random() < 0.34) {
+      candles.push({ o: c, h: c, l: c, c });
+      if (candles.length > CANDLE_COUNT) candles.shift();
+    }
+  }
+
+  function drawCandles() {
+    const g = $("candles");
+    const lineEl = $("close-line");
+    if (!g) return;
+    const width = 680, height = 188, pad = 6;
+    const lows = candles.map((k) => k.l);
+    const highs = candles.map((k) => k.h);
+    const min = Math.min(...lows) - 0.3;
+    const max = Math.max(...highs) + 0.3;
+    const y = (v) => height - ((v - min) / (max - min)) * (height - pad * 2) - pad;
+    const slot = width / candles.length;
+    const bodyW = Math.max(2, slot * 0.55);
+    let svg = "";
+    const pts = [];
+    candles.forEach((k, i) => {
+      const cx = i * slot + slot / 2;
+      const up = k.c >= k.o;
+      const yO = y(k.o), yC = y(k.c), yH = y(k.h), yL = y(k.l);
+      const top = Math.min(yO, yC);
+      const bh = Math.max(1.5, Math.abs(yC - yO));
+      svg += `<line class="wick ${up ? "up" : "down"}" x1="${cx.toFixed(1)}" y1="${yH.toFixed(1)}" x2="${cx.toFixed(1)}" y2="${yL.toFixed(1)}"/>`;
+      svg += `<rect class="body ${up ? "up" : "down"}" x="${(cx - bodyW / 2).toFixed(1)}" y="${top.toFixed(1)}" width="${bodyW.toFixed(1)}" height="${bh.toFixed(1)}" rx="0.6"/>`;
+      pts.push(`${i ? "L" : "M"}${cx.toFixed(1)} ${yC.toFixed(1)}`);
     });
-    const line = points.map(([x, y], i) => `${i ? "L" : "M"}${x.toFixed(1)} ${y.toFixed(1)}`).join(" ");
-    $("chart-line").setAttribute("d", line);
-    $("chart-area").setAttribute("d", `${line} L${width} ${height} L0 ${height} Z`);
+    g.innerHTML = svg;
+    if (lineEl) lineEl.setAttribute("d", pts.join(" "));
+    renderYLabels(min, max);
+  }
+
+  function renderYLabels(min, max) {
+    const box = $("chart-y-labels");
+    if (!box) return;
+    const steps = 5;
+    let html = "";
+    for (let i = 0; i < steps; i++) {
+      const v = max - (i / (steps - 1)) * (max - min);
+      html += `<span>${v.toFixed(1)}</span>`;
+    }
+    box.innerHTML = html;
   }
 
   function updateMarket() {
-    marketPrice = Math.max(140, Math.min(155, marketPrice + (Math.random() - 0.49) * 0.22));
-    chartValues.push(marketPrice);
-    chartValues = chartValues.slice(-42);
+    tickCandles();
     $("market-price").textContent = money(marketPrice);
-    const change = ((marketPrice - 148.25) / 148.25) * 100;
+    const change = ((marketPrice - basePrice) / basePrice) * 100;
     $("market-change").textContent = `${change >= 0 ? "+" : ""}${change.toFixed(2)}%`;
     $("market-change").style.color = change >= 0 ? "var(--green)" : "var(--red)";
     $("market-change").style.background = change >= 0 ? "#153429" : "#3a2028";
-    drawChart();
+    drawCandles();
     updateOrderPreview();
+  }
+
+  // optional "real" element: fetch live SOL spot price, fully guarded, non-blocking.
+  // Delete the single seedRealPrice(); call at the bottom to go 100% offline.
+  async function seedRealPrice() {
+    try {
+      const res = await fetch("https://api.coingecko.com/api/v3/simple/price?ids=solana&vs_currencies=usd", { cache: "no-store" });
+      if (!res.ok) return;
+      const data = await res.json();
+      const live = Number(data && data.solana && data.solana.usd);
+      if (!Number.isFinite(live) || live <= 0) return;
+      basePrice = live;
+      marketPrice = live;
+      candles = createCandles();      // rebuild the series anchored to the real price
+      const src = $("market-source");
+      if (src) src.textContent = "Live spot · SOL";
+      const note = $("feed-note");
+      if (note) note.textContent = "Seeded from live spot price";
+      drawCandles();
+      $("market-price").textContent = money(marketPrice);
+      showToast("Live SOL spot price loaded.");
+    } catch (_) { /* offline or blocked: keep the simulator, no error shown */ }
   }
 
   function getOrderInputs() {
@@ -110,8 +180,6 @@
     if (!Number.isFinite(referencePrice) || referencePrice <= 0 || referencePrice > 1000000) {
       showFeedback("Enter a valid reference price greater than $0.", "error"); return;
     }
-
-    // Simulate a small execution slippage. This is a learning model, not a market quote.
     const slippageRate = (Math.random() * 0.003) * (Math.random() < 0.5 ? -1 : 1);
     const fillPrice = referencePrice * (1 + slippageRate);
     const notional = quantity * fillPrice;
@@ -120,23 +188,14 @@
       showFeedback(`Insufficient virtual balance. This order needs ${money(notional)}, but you have ${money(session.balance)}.`, "error");
       return;
     }
-
     session.balance += cashChange;
-    // P/L is the execution difference versus the entered reference, not investment profit.
     const executionDifference = tradeType === "Buy"
       ? (referencePrice - fillPrice) * quantity
       : (fillPrice - referencePrice) * quantity;
     session.realizedPnl += executionDifference;
-
     const trade = {
       id: `${Date.now()}-${Math.random().toString(16).slice(2, 7)}`,
-      type: tradeType,
-      quantity,
-      referencePrice,
-      fillPrice,
-      slippageRate,
-      executionDifference,
-      notional,
+      type: tradeType, quantity, referencePrice, fillPrice, slippageRate, executionDifference, notional,
       timestamp: new Date().toISOString()
     };
     session.trades.unshift(trade);
@@ -162,14 +221,18 @@
     }
   }
 
+  function fmtTime(iso) {
+    try { return new Date(iso).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" }); } catch (_) { return "—"; }
+  }
+
   function renderTrades() {
     const tbody = $("trade-history");
     if (!session.trades.length) {
-      tbody.innerHTML = '<tr class="empty-row"><td colspan="5"><span class="empty-icon">◷</span><strong>No trades yet</strong><small>Your simulated executions will appear here.</small></td></tr>';
+      tbody.innerHTML = '<tr class="empty-row"><td colspan="6"><span class="empty-icon">◷</span><strong>No trades yet</strong><small>Your simulated executions will appear here.</small></td></tr>';
       return;
     }
     tbody.replaceChildren();
-    session.trades.slice(0, 8).forEach((trade) => {
+    session.trades.slice(0, 12).forEach((trade) => {
       const row = document.createElement("tr");
       const typeCell = document.createElement("td");
       typeCell.innerHTML = `<span class="trade-type-cell"><i class="type-dot ${trade.type === "Sell" ? "sell" : ""}"></i>${trade.type}</span>`;
@@ -178,7 +241,8 @@
       const slipHurts = trade.type === "Buy" ? trade.slippageRate > 0 : trade.slippageRate < 0;
       const slippageCell = cell(`${trade.slippageRate > 0 ? "+" : ""}${(trade.slippageRate * 100).toFixed(3)}%`, `mono ${slipHurts ? "negative" : "positive"}`);
       const resultCell = cell(signedMoney(trade.executionDifference), `mono ${trade.executionDifference >= 0 ? "positive" : "negative"}`);
-      row.append(typeCell, quantityCell, priceCell, slippageCell, resultCell);
+      const timeCell = cell(fmtTime(trade.timestamp), "mono");
+      row.append(typeCell, quantityCell, priceCell, slippageCell, resultCell, timeCell);
       tbody.appendChild(row);
     });
   }
@@ -191,7 +255,6 @@
   }
 
   function recordLeaderboardResult(trade) {
-    // This board compares each browser's best execution result; it is not a global leaderboard.
     const username = walletPublicKey ? `${walletPublicKey.slice(0, 4)}…${walletPublicKey.slice(-4)}` : "Guest trader";
     leaderboard.push({ username, points: Number(trade.executionDifference.toFixed(4)), timestamp: Date.now() });
     leaderboard.sort((a, b) => b.points - a.points);
@@ -214,7 +277,7 @@
       const li = document.createElement("li");
       const rank = document.createElement("span");
       rank.className = `rank ${index === 0 ? "first" : ""}`;
-      rank.textContent = String(index + 1).padStart(2, "0");
+      rank.textContent = index === 0 ? "★" : String(index + 1).padStart(2, "0");
       const name = document.createElement("span");
       name.className = "leader-name";
       name.textContent = entry.username;
@@ -235,10 +298,7 @@
   }
 
   async function connectWallet() {
-    if (walletPublicKey) {
-      showToast(`Wallet connected: ${walletPublicKey.slice(0, 4)}…${walletPublicKey.slice(-4)}`);
-      return;
-    }
+    if (walletPublicKey) { showToast(`Wallet connected: ${walletPublicKey.slice(0, 4)}…${walletPublicKey.slice(-4)}`); return; }
     if (!window.solana || !window.solana.isPhantom) {
       showToast("Phantom wallet not detected. You can still use the simulator as a guest.");
       $("wallet-button-label").textContent = "Wallet unavailable";
@@ -255,9 +315,7 @@
     } catch (error) {
       $("wallet-button-label").textContent = "Connect wallet";
       showToast(error && error.code === 4001 ? "Wallet connection was rejected." : "Could not connect wallet. Try again or continue as guest.");
-    } finally {
-      button.disabled = false;
-    }
+    } finally { button.disabled = false; }
   }
 
   function resetSession() {
@@ -270,13 +328,27 @@
     showToast("Simulation session reset.");
   }
 
+  // ---- view-switcher (the "different pages" feel, one file) ----
+  const VIEWS = ["dashboard", "history", "board"];
+  function showView(id, pushHash = true) {
+    const viewId = VIEWS.includes(id) ? id : "dashboard";
+    document.querySelectorAll(".view").forEach((v) => v.classList.toggle("is-visible", v.id === "view-" + viewId));
+    document.querySelectorAll(".nav-item").forEach((n) => n.classList.toggle("active", n.dataset.view === viewId));
+    if (pushHash) history.replaceState(null, "", "#" + viewId);
+    window.scrollTo({ top: 0, behavior: "auto" });
+  }
+  document.querySelectorAll("[data-view]").forEach((el) => {
+    el.addEventListener("click", (e) => { e.preventDefault(); showView(el.dataset.view); });
+  });
+  window.addEventListener("hashchange", () => showView((location.hash || "#dashboard").slice(1), false));
+
+  // ---- wiring ----
   $("trade-form").addEventListener("submit", executeTrade);
   $("trade-amount").addEventListener("input", updateOrderPreview);
   $("trade-price").addEventListener("input", updateOrderPreview);
   $("connect-wallet").addEventListener("click", connectWallet);
   $("clear-history").addEventListener("click", resetSession);
   $("dismiss-notice").addEventListener("click", () => document.querySelector(".notice").remove());
-
   document.querySelectorAll("[data-type]").forEach((button) => {
     button.addEventListener("click", () => {
       tradeType = button.dataset.type;
@@ -285,36 +357,16 @@
       $("trade-result").hidden = true;
     });
   });
-
   document.querySelectorAll("[data-amount]").forEach((button) => {
-    button.addEventListener("click", () => {
-      $("trade-amount").value = button.dataset.amount;
-      updateOrderPreview();
-    });
+    button.addEventListener("click", () => { $("trade-amount").value = button.dataset.amount; updateOrderPreview(); });
   });
 
-  // scroll-spy: keep the sidebar's active item in sync with the section in view
-  const spyLinks = [...document.querySelectorAll(".nav-item")];
-  const spySections = spyLinks
-    .map((link) => document.getElementById(link.getAttribute("href").slice(1)))
-    .filter(Boolean);
-  function onScrollSpy() {
-    if (!spySections.length) return;
-    const line = window.innerHeight * 0.4;
-    let current = spySections[0];
-    for (const section of spySections) {
-      if (section.getBoundingClientRect().top <= line) current = section;
-    }
-    spyLinks.forEach((link) => link.classList.toggle("active", link.getAttribute("href") === "#" + current.id));
-  }
-  window.addEventListener("scroll", () => requestAnimationFrame(onScrollSpy), { passive: true });
-  window.addEventListener("resize", () => requestAnimationFrame(onScrollSpy), { passive: true });
-  onScrollSpy();
-
+  showView((location.hash || "#dashboard").slice(1), false);
   renderStats();
   renderTrades();
   renderLeaderboard();
-  drawChart();
+  drawCandles();
   updateOrderPreview();
+  seedRealPrice();                 // <-- delete this line for a fully offline build
   window.setInterval(updateMarket, 5000);
 })();
