@@ -3,38 +3,220 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Dark Pool Trading Simulator</title>
-  <link rel="stylesheet" href="styles.css">
-  <script src="https://cdn.jsdelivr.net/npm/@solana/web3.js@latest/lib/index.iife.min.js"></script>
+  <title>Shadow-Pool | Dark Pool Trading Simulator</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <script src="https://unpkg.com/@solana/wallet-adapter-base@latest/lib/esm/index.js" type="module"></script>
 </head>
 <body>
-  <div class="container">
-    <h1>Dark Pool Trading Simulator</h1>
-    <button id="connect-wallet">Connect Phantom Wallet</button>
-    <div id="wallet-status"></div>
-    <div class="game-section">
-      <h2>Simulate a Trade</h2>
-      <label>Buy/Sell:
-        <select id="trade-type">
-          <option>Buy</option>
-          <option>Sell</option>
-        </select>
-      </label>
-      <label>Amount:
-        <input type="number" id="trade-amount" value="10" min="1" />
-      </label>
-      <label>Expected Price:
-        <input type="number" id="trade-price" value="100" min="1" />
-      </label>
-      <button id="trade-btn">Execute Trade</button>
-      <div id="trade-result"></div>
-      <div id="trade-history"></div>
-    </div>
-    <div class="leaderboard-section">
-      <h2>Leaderboard</h2>
-      <ul id="leaderboard"></ul>
-    </div>
+  <div class="app-shell">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <a href="#" class="brand">
+        <div class="brand-mark"><span></span><span></span><span></span></div>
+        <div>Shadow-Pool<small>TRADE THE INVISIBLE</small></div>
+      </a>
+      
+      <div class="side-label">NAVIGATION</div>
+      <nav class="side-nav">
+        <a href="#" class="nav-item active"><span class="nav-icon">◈</span> Dashboard</a>
+        <a href="#" class="nav-item"><span class="nav-icon">◷</span> History</a>
+        <a href="#" class="nav-item"><span class="nav-icon">◉</span> Leaderboard</a>
+      </nav>
+
+      <div class="sidebar-bottom">
+        <div class="demo-note">
+          <span class="pulse-dot"></span>
+          <div><strong>Simulation Mode</strong><small>No real funds are used.</small></div>
+        </div>
+        <div class="sidebar-footer">
+          Built for UI/UX demonstration.<br>
+          <span>© 2026 Shadow-Pool</span>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      <div class="notice">
+        <span class="notice-icon">⚠</span>
+        <div><strong>Educational Demo:</strong> This is a simulated environment. Prices are illustrative, and no real blockchain transactions are executed.</div>
+        <button class="notice-dismiss" id="dismiss-notice" aria-label="Dismiss notice">×</button>
+      </div>
+
+      <div class="topbar">
+        <div>
+          <h1>Trading Dashboard<span class="title-period">.</span></h1>
+          <h2>Simulated Dark Pool Execution</h2>
+        </div>
+        <div class="topbar-actions">
+          <span class="live-pill"><span class="pulse-dot"></span> LIVE SIMULATION</span>
+          <button class="button button-quiet" id="connect-wallet" aria-label="Connect Phantom Wallet">
+            <span class="wallet-symbol">◈</span> <span id="wallet-button-label">Connect Wallet</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Stats Grid -->
+      <div class="stats-grid">
+        <div class="stat-card balance-card">
+          <div class="stat-heading"><span>Virtual Balance</span><span class="stat-icon">◈</span></div>
+          <div class="stat-value" id="balance-value">$10,000.00</div>
+          <div class="stat-foot"><span class="mini-badge">USD</span> Available for simulated trading</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-heading"><span>Realized P&L</span><span class="stat-icon">↗</span></div>
+          <div class="stat-value" id="pnl-value">+$0.00</div>
+          <div class="stat-foot" id="pnl-caption">0 completed trades</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-heading"><span>Avg. Slippage</span><span class="stat-icon">⚡</span></div>
+          <div class="stat-value" id="quality-value">—</div>
+          <div class="stat-foot">Execution quality metric</div>
+        </div>
+      </div>
+
+      <div class="content-grid">
+        <!-- Chart Panel -->
+        <div class="panel">
+          <div class="panel-header">
+            <div class="market-selector">
+              <div class="asset-token">S</div>
+              <div><strong>SOL/USD</strong><small>Simulated Market</small></div>
+              <span class="chevron">▾</span>
+            </div>
+            <span class="trade-badge">UI/UX DEMO</span>
+          </div>
+          
+          <div class="price-row">
+            <div>
+              <span class="market-status"><span class="pulse-dot"></span> Market Open</span>
+              <div class="price-large" id="market-price">$148.25</div>
+            </div>
+            <div class="price-change" id="market-change">+0.00%</div>
+          </div>
+
+          <div class="chart-wrap">
+            <div class="chart-y-labels">
+              <span>149.8</span><span>149.0</span><span>148.2</span><span>147.4</span><span>146.1</span>
+            </div>
+            <svg class="market-chart" viewBox="0 0 680 188" preserveAspectRatio="none">
+              <defs>
+                <linearGradient id="chart-fill" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stop-color="var(--green)" stop-opacity="0.2"/>
+                  <stop offset="100%" stop-color="var(--green)" stop-opacity="0"/>
+                </linearGradient>
+              </defs>
+              <g class="chart-grid">
+                <path d="M0 47 H680 M0 94 H680 M0 141 H680" />
+              </g>
+              <path id="chart-area" class="chart-area" d="" />
+              <path id="chart-line" class="chart-line" d="" />
+            </svg>
+          </div>
+          <div class="chart-x-labels">
+            <span>10:00</span><span>11:00</span><span>12:00</span><span>13:00</span><span>14:00</span><span>15:00</span>
+          </div>
+          <div class="market-footer">
+            <span><span class="legend-dot"></span> Simulated price action (updates every 5s)</span>
+            <span>Data is randomly generated for UI demonstration.</span>
+          </div>
+        </div>
+
+        <!-- Trade Panel -->
+        <div class="panel trade-panel">
+          <h2>Execute Simulated Trade</h2>
+          <div class="trade-toggle">
+            <button class="toggle-button selected" data-type="Buy">Buy</button>
+            <button class="toggle-button" data-type="Sell">Sell</button>
+          </div>
+
+          <form id="trade-form">
+            <div class="field-label">
+              <label for="trade-amount">Quantity</label>
+              <span>SOL</span>
+            </div>
+            <div class="input-shell">
+              <input type="number" id="trade-amount" step="0.01" placeholder="0.00" required aria-label="Trade quantity">
+              <span class="input-suffix">SOL</span>
+            </div>
+            <div class="quick-amounts">
+              <button type="button" data-amount="10">10</button>
+              <button type="button" data-amount="50">50</button>
+              <button type="button" data-amount="100">100</button>
+              <button type="button" data-amount="500">500</button>
+            </div>
+
+            <div class="field-label">
+              <label for="trade-price">Reference Price</label>
+              <span>USD</span>
+            </div>
+            <div class="input-shell">
+              <span class="input-prefix">$</span>
+              <input type="number" id="trade-price" step="0.01" placeholder="0.00" required aria-label="Reference price">
+            </div>
+
+            <div class="order-summary">
+              <div><span>Estimated Order Value</span><strong id="order-value">—</strong></div>
+              <div><span>Execution Estimate</span><strong id="execution-estimate">Enter valid values</strong></div>
+            </div>
+
+            <button type="submit" class="button button-primary" id="trade-btn" disabled>
+              Execute simulated buy <span>→</span>
+            </button>
+            <div class="form-hint">Simulated slippage of ±0.15% will be applied.</div>
+            <div id="trade-result" class="trade-feedback" hidden></div>
+          </form>
+        </div>
+      </div>
+
+      <!-- Bottom Grid: History & Leaderboard -->
+      <div class="bottom-grid">
+        <div class="panel history-panel">
+          <div class="panel-header">
+            <h2>Recent Simulated Trades</h2>
+            <button class="text-button" id="clear-history">Clear History</button>
+          </div>
+          <div class="table-scroll">
+            <table>
+              <thead>
+                <tr>
+                  <th>Type</th>
+                  <th>Quantity</th>
+                  <th>Fill Price</th>
+                  <th>Slippage</th>
+                  <th>Execution Impact</th>
+                </tr>
+              </thead>
+              <tbody id="trade-history">
+                <tr class="empty-row"><td colspan="5"><span class="empty-icon">◷</span><strong>No trades yet</strong><small>Your simulated executions will appear here.</small></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="panel leaderboard-panel">
+          <div class="panel-header">
+            <h2><span class="leaderboard-icon">🏆</span> Local Leaderboard</h2>
+          </div>
+          <p class="leaderboard-subtitle">Best execution impact in this browser session.</p>
+          <ul class="leaderboard-list" id="leaderboard">
+            <li class="leaderboard-empty">Make a trade to enter the board.</li>
+          </ul>
+          <div class="leaderboard-foot">Leaderboard is stored locally and resets if browser data is cleared.</div>
+        </div>
+      </div>
+
+      <footer class="page-footer">
+        <span>Shadow-Pool Simulator v1.0</span>
+        <span>Built with <b>HTML</b>, <b>CSS</b>, and <b>Vanilla JS</b></span>
+      </footer>
+    </main>
   </div>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
   <script src="script.js"></script>
 </body>
-  </html>
+</html>
