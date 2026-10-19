@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="Shadow-Pool — a gamified, accessible dark-pool paper-trading simulator built with vanilla HTML, CSS and JS. No real funds.">
+  <meta name="description" content="Shadow-Pool — a gamified, accessible dark-pool paper-trading simulator with switchable candlestick/line/area charts and a live simulated leaderboard. Built with vanilla HTML, CSS and JS. No real funds.">
   <title>Shadow-Pool | Dark Pool Trading Simulator</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -13,37 +13,30 @@
 </head>
 <body>
   <div class="app-shell">
-    <!-- Sidebar -->
     <aside class="sidebar">
       <a href="#dashboard" class="brand" data-view="dashboard">
         <div class="brand-mark"><span></span><span></span><span></span></div>
         <div>Shadow-Pool<small>TRADE THE INVISIBLE</small></div>
       </a>
-
       <div class="side-label">NAVIGATION</div>
       <nav class="side-nav">
         <a href="#dashboard" class="nav-item active" data-view="dashboard"><span class="nav-icon">◈</span> Dashboard</a>
         <a href="#history" class="nav-item" data-view="history"><span class="nav-icon">◷</span> History</a>
         <a href="#board" class="nav-item" data-view="board"><span class="nav-icon">◉</span> Leaderboard</a>
       </nav>
-
       <div class="sidebar-bottom">
         <div class="demo-note">
           <span class="pulse-dot"></span>
           <div><strong>Simulation Mode</strong><small>No real funds are used.</small></div>
         </div>
-        <div class="sidebar-footer">
-          Built for UI/UX demonstration.<br>
-          <span>© 2026 Shadow-Pool</span>
-        </div>
+        <div class="sidebar-footer">Built for UI/UX demonstration.<br><span>© 2026 Shadow-Pool</span></div>
       </div>
     </aside>
 
-    <!-- Main Content -->
     <main class="main-content">
       <div class="notice">
         <span class="notice-icon">⚠</span>
-        <div><strong>Educational Demo:</strong> This is a simulated environment. Prices are illustrative, and no real blockchain transactions are executed.</div>
+        <div><strong>Educational Demo:</strong> This is a simulated environment. Prices, peer traders and rankings are illustrative; no real blockchain transactions are executed.</div>
         <button class="notice-dismiss" id="dismiss-notice" aria-label="Dismiss notice">×</button>
       </div>
 
@@ -81,7 +74,6 @@
         </div>
 
         <div class="content-grid">
-          <!-- Chart Panel -->
           <div class="panel">
             <div class="panel-header">
               <div class="market-selector">
@@ -100,39 +92,45 @@
               <div class="price-change" id="market-change">+0.00%</div>
             </div>
 
+            <div class="chart-modes" role="group" aria-label="Chart type">
+              <button type="button" class="mode-btn selected" data-mode="candles" aria-pressed="true">Candles</button>
+              <button type="button" class="mode-btn" data-mode="line" aria-pressed="false">Line</button>
+              <button type="button" class="mode-btn" data-mode="area" aria-pressed="false">Area</button>
+            </div>
+
             <div class="chart-wrap">
               <div class="chart-y-labels" id="chart-y-labels"></div>
               <svg class="market-chart" viewBox="0 0 680 188" preserveAspectRatio="none">
-                <g class="chart-grid">
-                  <path d="M0 47 H680 M0 94 H680 M0 141 H680" />
-                </g>
+                <defs>
+                  <linearGradient id="chart-fill" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stop-color="var(--green)" stop-opacity="0.22"/>
+                    <stop offset="100%" stop-color="var(--green)" stop-opacity="0"/>
+                  </linearGradient>
+                </defs>
+                <g class="chart-grid"><path d="M0 47 H680 M0 94 H680 M0 141 H680" /></g>
+                <path id="chart-area" class="chart-area" d="" />
                 <g id="candles"></g>
-                <path id="close-line" class="close-line" d="" />
+                <path id="close-line" class="price-line" d="" style="display:none" />
               </svg>
             </div>
             <div class="chart-x-labels">
               <span>−30m</span><span>−24m</span><span>−18m</span><span>−12m</span><span>−6m</span><span>now</span>
             </div>
             <div class="market-footer">
-              <span><span class="legend-dot up"></span> Bullish candle</span>
-              <span><span class="legend-dot down"></span> Bearish candle</span>
-              <span id="feed-note">Live spot price when online</span>
+              <span><span class="legend-dot up"></span> Bullish</span>
+              <span><span class="legend-dot down"></span> Bearish</span>
+              <span id="feed-note">Switch chart type above · live spot when online</span>
             </div>
           </div>
 
-          <!-- Trade Panel -->
           <div class="panel trade-panel">
             <h2>Execute Simulated Trade</h2>
             <div class="trade-toggle">
               <button class="toggle-button selected" data-type="Buy">Buy</button>
               <button class="toggle-button" data-type="Sell">Sell</button>
             </div>
-
             <form id="trade-form">
-              <div class="field-label">
-                <label for="trade-amount">Quantity</label>
-                <span>SOL</span>
-              </div>
+              <div class="field-label"><label for="trade-amount">Quantity</label><span>SOL</span></div>
               <div class="input-shell">
                 <input type="number" id="trade-amount" step="0.01" placeholder="0.00" required aria-label="Trade quantity">
                 <span class="input-suffix">SOL</span>
@@ -143,24 +141,16 @@
                 <button type="button" data-amount="100">100</button>
                 <button type="button" data-amount="500">500</button>
               </div>
-
-              <div class="field-label">
-                <label for="trade-price">Reference Price</label>
-                <span>USD</span>
-              </div>
+              <div class="field-label"><label for="trade-price">Reference Price</label><span>USD</span></div>
               <div class="input-shell">
                 <span class="input-prefix">$</span>
                 <input type="number" id="trade-price" step="0.01" placeholder="0.00" required aria-label="Reference price">
               </div>
-
               <div class="order-summary">
                 <div><span>Estimated Order Value</span><strong id="order-value">—</strong></div>
                 <div><span>Execution Estimate</span><strong id="execution-estimate">Enter valid values</strong></div>
               </div>
-
-              <button type="submit" class="button button-primary" id="trade-btn" disabled>
-                Execute simulated buy <span>→</span>
-              </button>
+              <button type="submit" class="button button-primary" id="trade-btn" disabled>Execute simulated buy <span>→</span></button>
               <div class="form-hint">Simulated slippage of ±0.15% will be applied.</div>
               <div id="trade-result" class="trade-feedback" hidden></div>
             </form>
@@ -181,16 +171,7 @@
           </div>
           <div class="table-scroll">
             <table>
-              <thead>
-                <tr>
-                  <th>Type</th>
-                  <th>Quantity</th>
-                  <th>Fill Price</th>
-                  <th>Slippage</th>
-                  <th>Execution Impact</th>
-                  <th>Time</th>
-                </tr>
-              </thead>
+              <thead><tr><th>Type</th><th>Quantity</th><th>Fill Price</th><th>Slippage</th><th>Execution Impact</th><th>Time</th></tr></thead>
               <tbody id="trade-history">
                 <tr class="empty-row"><td colspan="6"><span class="empty-icon">◷</span><strong>No trades yet</strong><small>Your simulated executions will appear here.</small></td></tr>
               </tbody>
@@ -203,7 +184,7 @@
       <section class="view" id="view-board">
         <div class="view-head">
           <h1>Leaderboard<span class="title-period">.</span></h1>
-          <h2>Best execution impact in this browser session</h2>
+          <h2>Best execution impact · you vs. simulated peers</h2>
         </div>
         <div class="panel leaderboard-panel">
           <div class="panel-header">
@@ -212,7 +193,7 @@
           <ul class="leaderboard-list" id="leaderboard">
             <li class="leaderboard-empty">Make a trade to enter the board.</li>
           </ul>
-          <div class="leaderboard-foot">Leaderboard is stored locally and resets if browser data is cleared. It is not a global ranking.</div>
+          <div class="leaderboard-foot">Ranked by execution impact (lower slippage = higher score). Your rows are tagged <b style="color:var(--green)">YOU</b>; the rest are simulated peer traders generated for demonstration. Stored locally — not a global ranking, and peers never affect your balance.</div>
         </div>
       </section>
 
