@@ -196,6 +196,7 @@
   ];
   function userLabel() { return walletPublicKey ? `${walletPublicKey.slice(0, 4)}…${walletPublicKey.slice(-4)}` : "Guest trader"; }
   function pushLeaderboardEntry(username, points, isSelf) {
+    pushActivity({ username, points });                 // TICKER (3/3): every live event flashes, even ones that miss top-5
     leaderboard.push({ username, points, isSelf, timestamp: Date.now() });
     leaderboard.sort((a, b) => b.points - a.points);
     leaderboard = leaderboard.slice(0, 5);
@@ -212,13 +213,21 @@
       pushLeaderboardEntry(p.n, peerPoints(p), false);
     }
   }
-  function seedPeers() {                                // populate the board on a fresh visit so it never looks dead
+  function seedPeers() {                                // backfill board on a fresh visit; intentionally does NOT touch the ticker
     for (let i = 0; i < 4; i++) {
       const p = PEERS[Math.floor(Math.random() * PEERS.length)];
       leaderboard.push({ username: p.n, points: peerPoints(p), isSelf: false, timestamp: Date.now() - i * 60000 });
     }
     leaderboard.sort((a, b) => b.points - a.points);
     leaderboard = leaderboard.slice(0, 5);
+  }
+  function pushActivity(entry) {                       // TICKER fn: live firehose, capped, reduced-motion-safe via global rule
+    const box = $("activity"); if (!box) return;
+    const chip = document.createElement("span"); chip.className = "chip";
+    const sign = entry.points >= 0 ? "up" : "down";
+    chip.innerHTML = `<b>${entry.username}</b> <span class="${sign}">${signedMoney(entry.points)}</span>`;
+    box.prepend(chip);
+    while (box.children.length > 12) box.lastChild.remove();
   }
   function renderLeaderboard() {
     const list = $("leaderboard"); list.replaceChildren();
