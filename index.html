@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="Shadow-Pool — a gamified, accessible dark-pool paper-trading simulator with switchable candlestick/line/area charts and a live simulated leaderboard. Built with vanilla HTML, CSS and JS. No real funds.">
+  <meta name="description" content="Shadow-Pool — a gamified, accessible dark-pool paper-trading simulator with switchable candlestick/line/area charts, a live simulated peer leaderboard, and an activity feed. Built with vanilla HTML, CSS and JS. No real funds.">
   <title>Shadow-Pool | Dark Pool Trading Simulator</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -121,6 +121,8 @@
               <span><span class="legend-dot down"></span> Bearish</span>
               <span id="feed-note">Switch chart type above · live spot when online</span>
             </div>
+            <!-- TICKER (1/3): live activity firehose; aria-hidden because the leaderboard is the accessible source of truth -->
+            <div class="activity" id="activity" aria-hidden="true"></div>
           </div>
 
           <div class="panel trade-panel">
